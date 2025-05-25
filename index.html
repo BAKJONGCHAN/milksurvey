@@ -227,16 +227,16 @@
 };
         const GITHUB_APP_ID = "cu_miksurvey_2025"; 
         // --- 사용자 설정 영역 끝 ---
+
+
         
         let app; let auth; let db; let userId = null; let isAuthReady = false;
         let allFetchedApplications = []; let currentlyDisplayedApplications = []; 
 
         // Determine Firebase config: Use injected __firebase_config if available (Canvas env), otherwise use user-defined for GitHub Pages.
-        const effectiveFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfigFromUser;
+        const effectiveFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig; // 수정된 부분!
         const effectiveAppId = typeof __app_id !== 'undefined' ? __app_id : GITHUB_APP_ID;
 
-
-        // Function to display modal messages (defined early)
         window.showModalMessage = function(message, modalId = "messageModal") {
             const targetModal = document.getElementById(modalId);
             if (!targetModal) { console.error(`[showModalMessage] Modal with ID "${modalId}" not found.`); return; }
@@ -252,19 +252,14 @@
             targetModal.style.display = "block";
         }
 
-        // Check if the Firebase config is still the placeholder
         if (effectiveFirebaseConfig.apiKey === "여기에-API-키를-입력하세요" || !effectiveFirebaseConfig.projectId) {
             console.error("Firebase configuration is not set. Please update firebaseConfig in the HTML script with your project details.");
-            // Try to show modal, but it might also fail if DOM isn't ready or showModalMessage itself has issues.
-            // This is a best-effort attempt to inform the user.
             const criticalErrorMsg = "Firebase 설정이 올바르지 않습니다. HTML 코드 내의 '사용자 설정 영역'에서 firebaseConfig 값을 실제 Firebase 프로젝트 정보로 수정해주세요.";
             if (typeof showModalMessage === "function") {
-                 // Delay slightly to ensure DOM might be ready for modal
                 setTimeout(() => showModalMessage(criticalErrorMsg, "messageModal"), 100);
             } else {
-                alert(criticalErrorMsg); // Fallback to alert if modal system isn't ready
+                alert(criticalErrorMsg); 
             }
-            // Disable form submission if config is bad
             const submitButton = document.getElementById('submitApplication');
             if(submitButton) { submitButton.disabled = true; submitButton.textContent = '설정 오류'; submitButton.classList.add('bg-red-500', 'cursor-not-allowed');}
         } else {
@@ -282,7 +277,6 @@
             }
         }
 
-
         onAuthStateChanged(auth, async (user) => {
             if (user) { 
                 userId = user.uid; 
@@ -290,8 +284,6 @@
                 console.log("User is signed in with UID:", userId); 
             } else { 
                 console.log("User is not signed in. Attempting to sign in.");
-                // For GitHub Pages, always try anonymous sign-in if no user and no __initial_auth_token
-                // For Canvas, if __initial_auth_token is present, it would have been used. If not, anonymous.
                 if (typeof __initial_auth_token === 'undefined' || !__initial_auth_token) {
                     try { 
                         console.log("Attempting anonymous sign-in.");
@@ -304,8 +296,6 @@
                         if (typeof showModalMessage === "function") { showModalMessage(`익명 인증 실패: ${error.message}. Firebase 설정을 확인하고, Firebase 콘솔에서 익명 로그인이 활성화되어 있는지 확인하세요.`, "messageModal"); } else { console.error("showModalMessage not available for auth error.");}
                     }
                 } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    // This case should ideally be handled by signInWithCustomToken if __initial_auth_token was meant to be used
-                    // but onAuthStateChanged is called with user=null. This might indicate token failure.
                     console.warn("onAuthStateChanged: User is null, but __initial_auth_token was defined. Custom token sign-in might have failed silently or is pending.");
                 }
             }
